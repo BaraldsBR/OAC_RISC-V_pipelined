@@ -10,24 +10,55 @@ module datapath(input         clk, reset,
                 output [31:0] ALUResult, WriteData,
                 input  [31:0] ReadData);
 
-  wire [31:0] PCNext, PCPlus4, PCTarget;
-  wire [31:0] ImmExt;
-  wire [31:0] SrcA, SrcB;
-  wire [31:0] Result;
+  // instruction fetch
 
-  // next PC logic
-  flopr #(32) pcreg(clk, reset, PCNext, PC); 
-  adder       pcadd4(PC, 32'd4, PCPlus4);
-  adder       pcaddbranch(PC, ImmExt, PCTarget);
-  mux2 #(32)  pcmux(PCPlus4, PCTarget, PCSrc, PCNext);
+  wire [31:0] PCF, PCNextF, PCPlus4F;
+  assign PC = PCF;
+
+  adder          pcadd4(PCF, 32'd4, PCPlus4F);
+  mux2 #(32)     pcmux(PCPlus4F, PCTargetE, PCSrc, PCNextF);
+  flopr #(32)    pcreg(clk, reset, PCNextF, PCF); 
+
+  wire [31:0] InstrD, PCD, PCPlus4D;
+  registerbankfd rfd(clk, 1'b1, 1'b0, InstrF, PCF, PCPlus4F, InstrD, PCD, PCPlus4D);
+
+  // instruction decode
+
+  wire [31:0] ImmExtD, rs1D, rs2D;
+
+  regfile     rf(clk, RegWrite, InstrD[19:15], InstrD[24:20], 
+                 rdAddrW, ResultW, rs1D, rs2D);
+  extend      ext(InstrD[31:7], ImmSrc, ImmExtD);
+
+  wire [4:0]  rdAddrE;
+  wire [31:0] rs1E, rs2E, PCE, ImmExtE, PCPlus4E;
+  registerbankde rde(clk, 1'b1, 1'b0, rs1D, rs2D, PCD, InstrD[11:7], ImmExtD, PCPlus4D, rs1E, rs2E, PCE, rdAddrE, ImmExtE, PCPlus4E);
+
+  // instruction execution
+
+  wire [31:0] PCTargetE, SrcBE, ALUResultE;
+
+  mux2 #(32)  srcbmux(rs2E, ImmExtE, ALUSrc, SrcBE);
+  alu         alu(rs1E, SrcBE, ALUControl, ALUResultE, Zero);
+  adder       pcaddbranch(PCE, ImmExtE, PCTargetE);
  
-  // register file logic
-  regfile     rf(clk, RegWrite, Instr[19:15], Instr[24:20], 
-                 Instr[11:7], Result, SrcA, WriteData);
-  extend      ext(Instr[31:7], ImmSrc, ImmExt);
+ 
+  wire [4:0]  rdAddrM;
+  wire [31:0] rs2M, ALUResultM, PCPlus4M;
+  registerbankem rem(clk, 1'b1, 1'b0, ALUResultE, rs2E, rdAddrE, PCPlus4E, ALUResultM, rs2M, rdAddrM, PCPlus4M);
 
-  // ALU logic
-  mux2 #(32)  srcbmux(WriteData, ImmExt, ALUSrc, SrcB);
-  alu         alu(SrcA, SrcB, ALUControl, ALUResult, Zero);
-  mux3 #(32)  resultmux(ALUResult, ReadData, PCPlus4, ResultSrc, Result);
+  // memory access
+
+  wire [31:0] ReadDataM;
+  assign ALUResult = ALUResultM;
+  assign WriteData = rs2M;
+  assign ReadDataM = ReadData;
+
+  wire [4:0]  rdAddrW;
+  wire [31:0] ReadDataW, ALUResultW, PCPlus4W;
+  registerbankmw rmw(clk, 1'b1, 1'b0, ALUResultM, ReadDataM, rdAddrM, PCPlus4M, ALUResultW, ReadDataW, rdAddrW, PCPlus4W);
+  
+  wire [31:0] ResultW;
+  mux3 #(32)  resultmux(ALUResultW, ReadDataW, PCPlus4W, ResultSrc, ResultW);
+
 endmodule
