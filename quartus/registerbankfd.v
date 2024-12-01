@@ -8,12 +8,12 @@ module registerbankfd(input             clk,
                       output reg [31:0] pcOUT,
                       output reg [31:0] pcPlus4OUT);
 
-  always @ (posedge reset)
-  begin
-      pcOUT <= 32'b0;
-      instructionOUT <= 32'b0;
-      pcPlus4OUT <= 32'b0;
-  end
+  // always @ (posedge reset)
+  // begin
+  //     pcOUT <= 32'b0;
+  //     instructionOUT <= 32'b0;
+  //     pcPlus4OUT <= 32'b0;
+  // end
 
   always @ (posedge clk)
     if (we && ~reset) begin

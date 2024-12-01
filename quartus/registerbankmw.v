@@ -1,22 +1,24 @@
 module registerbankmw(input             clk,
                       input             we,
                       input             reset,
-                      input      [31:0] aluResultIN,
-                      input      [31:0] memoryResIN,
+                      input      [31:0] aluResultIN, memoryResIN,
                       input      [4:0]  rdAddrIN,
                       input      [31:0] pcPlus4IN,
-                      output reg [31:0] aluResultOUT,
-                      output reg [31:0] memoryResOUT,
+                      input             RegWriteIN,
+                      input      [1:0]  ResultSrcIN,
+                      output reg [31:0] aluResultOUT, memoryResOUT,
                       output reg [4:0]  rdAddrOUT,
-                      output reg [31:0] pcPlus4OUT);
+                      output reg [31:0] pcPlus4OUT,
+                      output reg        RegWriteOUT,
+                      output reg [1:0]  ResultSrcOUT);
 
-  always @ (posedge reset)
-    begin
-      aluResultOUT <= 32'b0;
-      memoryResOUT <= 32'b0;
-      rdAddrOUT <= 5'b0;
-      pcPlus4OUT <= 32'b0;
-    end
+  // always @ (posedge reset)
+  //   begin
+  //     aluResultOUT <= 32'b0;
+  //     memoryResOUT <= 32'b0;
+  //     rdAddrOUT <= 5'b0;
+  //     pcPlus4OUT <= 32'b0;
+  //   end
 
   always @ (posedge clk)
     if (we && ~reset) begin
@@ -24,5 +26,7 @@ module registerbankmw(input             clk,
       memoryResOUT <= memoryResIN;
       rdAddrOUT <= rdAddrIN;
       pcPlus4OUT <= pcPlus4IN;
+      RegWriteOUT <= RegWriteIN;
+      ResultSrcOUT <= ResultSrcIN;
     end
 endmodule
