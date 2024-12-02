@@ -60,8 +60,9 @@ module datapath(input         clk, reset,
                     rdAddrM, rdAddrW,
                     forwardAE, forwardBE);
 
-  hazardunit     hu(ResultSrcE == 2'b01, InstrD[19:15], InstrD[24:20], rdAddrE,
-                    stallF, stallD, flushE);
+  hazardunit     hu(ResultSrcE == 2'b01, PCSrcE,
+                    InstrD[19:15], InstrD[24:20], rdAddrE,
+                    stallF, stallD, flushD, flushE);
 
   // instruction fetch
 
@@ -72,7 +73,7 @@ module datapath(input         clk, reset,
   mux2 #(32)     pcmux(PCPlus4F, PCTargetE, PCSrcE, PCNextF);
   flopr #(32)    pcreg(clk, reset, ~stallF, PCNextF, PCF);
 
-  registerbankfd rfd(clk, ~stallD, reset,
+  registerbankfd rfd(clk, ~stallD, reset | flushD,
                      InstrF, PCF, PCPlus4F,
                      InstrD, PCD, PCPlus4D);
 
