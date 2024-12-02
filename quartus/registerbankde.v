@@ -16,7 +16,7 @@ module registerbankde(input             clk,
                       output reg [2:0]  ALUControlOUT,
                       output reg [4:0]  rs1AddrOUT, rs2AddrOUT);
 
-  always @ (posedge reset, posedge clk)
+  always @ (posedge clk)
   begin
     if (reset) begin
       rs1OUT <= 32'b0;
