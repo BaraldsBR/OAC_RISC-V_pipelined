@@ -12,16 +12,17 @@ module registerbankem(input             clk,
                       output reg        RegWriteOUT, MemWriteOUT,
                       output reg [1:0]  ResultSrcOUT);
 
-  // always @ (posedge reset)
-  //   begin
-  //     aluResultOUT <= 32'b0;
-  //     writeDataOUT <= 32'b0;
-  //     rdAddrOUT <= 5'b0;
-  //     pcPlus4OUT <= 32'b0;
-  //   end
-
   always @ (posedge clk)
-    if (we && ~reset) begin
+  begin
+    if (reset) begin
+      aluResultOUT <= 32'b0;
+      writeDataOUT <= 32'b0;
+      rdAddrOUT <= 5'b0;
+      pcPlus4OUT <= 32'b0;
+      RegWriteOUT <= 1'b0;
+      MemWriteOUT <= 1'b0;
+      ResultSrcOUT <= 2'b0;
+    end else if (we) begin
       aluResultOUT <= aluResultIN;
       writeDataOUT <= writeDataIN;
       rdAddrOUT <= rdAddrIN;
@@ -30,4 +31,5 @@ module registerbankem(input             clk,
       MemWriteOUT <= MemWriteIN;
       ResultSrcOUT <= ResultSrcIN;
     end
+  end
 endmodule

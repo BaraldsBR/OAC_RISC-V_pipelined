@@ -30,10 +30,11 @@ module datapath(input         clk, reset,
   wire           RegWriteE, MemWriteE, JumpE, BranchE, ALUSrcE;
   wire [1:0]     ResultSrcE;
   wire [2:0]     ALUControlE;
-  wire [4:0]     rdAddrE;
+  wire [4:0]     rs1AddrE, rs2AddrE, rdAddrE;
   wire [31:0]    rs1E, rs2E, PCE, ImmExtE, PCPlus4E;
-  wire [31:0]    PCTargetE, SrcBE, ALUResultE;
+  wire [31:0]    fwdRs1E, fwdRs2E, PCTargetE, SrcBE, ALUResultE;
   wire           ZeroE, PCSrcE;
+  wire [1:0]     forwardAE, forwardBE;
 
   // MEM
   wire           RegWriteM;
@@ -59,7 +60,7 @@ module datapath(input         clk, reset,
   mux2 #(32)     pcmux(PCPlus4F, PCTargetE, PCSrcE, PCNextF);
   flopr #(32)    pcreg(clk, reset, PCNextF, PCF);
 
-  registerbankfd rfd(clk, 1'b1, 1'b0,
+  registerbankfd rfd(clk, 1'b1, reset,
                      InstrF, PCF, PCPlus4F,
                      InstrD, PCD, PCPlus4D);
 
@@ -81,23 +82,32 @@ module datapath(input         clk, reset,
                     rdAddrW, ResultW, rs1D, rs2D);
   extend         ext(InstrD[31:7], ImmSrcD, ImmExtD);
 
-  registerbankde rde(clk, 1'b1, 1'b0,
+  registerbankde rde(clk, 1'b1, reset,
                      rs1D, rs2D, PCD, InstrD[11:7], ImmExtD, PCPlus4D,
                      RegWriteD, MemWriteD, JumpD, BranchD, ALUSrcD,
                      ResultSrcD, ALUControlD,
+                     InstrD[19:15], InstrD[24:20],
                      rs1E, rs2E, PCE, rdAddrE, ImmExtE, PCPlus4E,
                      RegWriteE, MemWriteE, JumpE, BranchE, ALUSrcE,
-                     ResultSrcE, ALUControlE);
+                     ResultSrcE, ALUControlE,
+                     rs1AddrE, rs2AddrE);
 
   // instruction execution
 
   assign         PCSrcE = JumpE | (BranchE & ZeroE);
 
-  mux2 #(32)     srcbmux(rs2E, ImmExtE, ALUSrcE, SrcBE);
-  alu            alu(rs1E, SrcBE, ALUControlE, ALUResultE, ZeroE);
+  forwardingunit fu(RegWriteM, RegWriteW,
+                    rs1AddrE, rs2AddrE,
+                    rdAddrM, rdAddrW,
+                    forwardAE, forwardBE);
+
+  mux3 #(32)     fwdA(rs1E, ALUResultM, ResultW, forwardAE, fwdRs1E);
+  mux3 #(32)     fwdB(rs2E, ALUResultM, ResultW, forwardBE, fwdRs2E);
+  mux2 #(32)     srcbmux(fwdRs2E, ImmExtE, ALUSrcE, SrcBE);
+  alu            alu(fwdRs1E, SrcBE, ALUControlE, ALUResultE, ZeroE);
   adder          pcaddbranch(PCE, ImmExtE, PCTargetE);
 
-  registerbankem rem(clk, 1'b1, 1'b0,
+  registerbankem rem(clk, 1'b1, reset,
                      ALUResultE, rs2E, rdAddrE, PCPlus4E,
                      RegWriteE, MemWriteE, ResultSrcE,
                      ALUResultM, rs2M, rdAddrM, PCPlus4M,
@@ -109,7 +119,7 @@ module datapath(input         clk, reset,
   assign         WriteData = rs2M;
   assign         ReadDataM = ReadData;
 
-  registerbankmw rmw(clk, 1'b1, 1'b0,
+  registerbankmw rmw(clk, 1'b1, reset,
                      ALUResultM, ReadDataM, rdAddrM, PCPlus4M,
                      RegWriteM, ResultSrcM,
                      ALUResultW, ReadDataW, rdAddrW, PCPlus4W,
